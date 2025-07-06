@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Navigate } from "react-router-dom";
 import { MetricCard } from "@/components/health/MetricCard";
 import { HealthChart } from "@/components/health/HealthChart";
 import { MacroLogger } from "@/components/health/MacroLogger";
@@ -14,17 +15,37 @@ import {
   Zap,
   Menu,
   Sun,
-  MoonIcon
+  MoonIcon,
+  LogOut,
+  User
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { user, signOut, loading } = useAuth();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
 
   // Mock health data - in real app this would come from APIs
   const mockHealthData = {
@@ -74,6 +95,9 @@ const Index = () => {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground hidden md:block">
+                Welcome, {user.email}
+              </span>
               <Button
                 variant="ghost"
                 size="icon"
@@ -86,7 +110,10 @@ const Index = () => {
                 }
               </Button>
               <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
+                <User className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleSignOut}>
+                <LogOut className="h-5 w-5" />
               </Button>
             </div>
           </div>
