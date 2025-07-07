@@ -5,13 +5,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PasswordInput } from '@/components/ui/password-input';
 import { useAuth } from '@/hooks/useAuth';
+import { usePasswordValidation } from '@/hooks/usePasswordValidation';
 import { toast } from '@/hooks/use-toast';
 import { Activity, Mail } from 'lucide-react';
 
 export default function Auth() {
   const { user, signIn, signUp, signInWithGoogle } = useAuth();
+  const { validationResult, isValidating, validatePassword } = usePasswordValidation();
   const [isLoading, setIsLoading] = useState(false);
+  const [showValidation, setShowValidation] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -24,10 +28,16 @@ export default function Auth() {
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value
     }));
+    
+    // Validate password in real-time for signup
+    if (name === 'password' && showValidation) {
+      validatePassword(value);
+    }
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -55,6 +65,17 @@ export default function Auth() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    // Validate password before signup
+    if (!validationResult?.isValid) {
+      toast({
+        title: "Invalid password",
+        description: "Please fix the password issues before continuing.",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+      return;
+    }
 
     const { error } = await signUp(formData.email, formData.password, formData.displayName);
     
@@ -169,17 +190,29 @@ export default function Auth() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
-                  <Input
+                  <PasswordInput
                     id="signup-password"
                     name="password"
-                    type="password"
                     placeholder="Create a password"
                     value={formData.password}
                     onChange={handleInputChange}
+                    onFocus={() => {
+                      setShowValidation(true);
+                      if (formData.password) {
+                        validatePassword(formData.password);
+                      }
+                    }}
+                    validationResult={validationResult}
+                    isValidating={isValidating}
+                    showValidation={showValidation}
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isLoading || (showValidation && !validationResult?.isValid)}
+                >
                   {isLoading ? "Creating account..." : "Create Account"}
                 </Button>
               </form>
