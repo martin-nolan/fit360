@@ -9,6 +9,135 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ai_summaries: {
+        Row: {
+          content: string
+          created_at: string
+          date: string
+          id: string
+          period: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          date: string
+          id?: string
+          period: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          date?: string
+          id?: string
+          period?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      macro_logs: {
+        Row: {
+          calories: number | null
+          carbs: number | null
+          created_at: string
+          date: string
+          fat: number | null
+          id: string
+          notes: string | null
+          protein: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          calories?: number | null
+          carbs?: number | null
+          created_at?: string
+          date: string
+          fat?: number | null
+          id?: string
+          notes?: string | null
+          protein?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          calories?: number | null
+          carbs?: number | null
+          created_at?: string
+          date?: string
+          fat?: number | null
+          id?: string
+          notes?: string | null
+          protein?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      metrics: {
+        Row: {
+          created_at: string
+          id: string
+          source: string
+          timestamp: string
+          type: string
+          user_id: string
+          value: number | null
+          value_json: Json | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          source: string
+          timestamp?: string
+          type: string
+          user_id: string
+          value?: number | null
+          value_json?: Json | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          source?: string
+          timestamp?: string
+          type?: string
+          user_id?: string
+          value?: number | null
+          value_json?: Json | null
+        }
+        Relationships: []
+      }
+      photos: {
+        Row: {
+          created_at: string
+          description: string | null
+          fullres_url: string | null
+          id: string
+          thumbnail_url: string | null
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          fullres_url?: string | null
+          id?: string
+          thumbnail_url?: string | null
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          fullres_url?: string | null
+          id?: string
+          thumbnail_url?: string | null
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
