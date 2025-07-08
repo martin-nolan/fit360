@@ -77,12 +77,14 @@ export default {
 				'gradient-secondary': 'var(--gradient-secondary)',
 				'gradient-accent': 'var(--gradient-accent)',
 				'gradient-wellness': 'var(--gradient-wellness)',
-				'gradient-card': 'var(--gradient-card)'
+				'gradient-card': 'var(--gradient-card)',
+				'gradient-360': 'var(--gradient-360)'
 			},
 			boxShadow: {
 				'health': 'var(--shadow-health)',
 				'metric': 'var(--shadow-metric)',
-				'glow': 'var(--shadow-glow)'
+				'glow': 'var(--shadow-glow)',
+				'360': 'var(--shadow-360)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -140,7 +142,8 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'health-pulse': 'health-pulse 3s ease-in-out infinite',
 				'metric-slide-up': 'metric-slide-up 0.4s ease-out',
-				'wellness-glow': 'wellness-glow 2s ease-in-out infinite'
+				'wellness-glow': 'wellness-glow 2s ease-in-out infinite',
+				'spin-slow': 'spin 20s linear infinite'
 			}
 		}
 	},

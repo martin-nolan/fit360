@@ -5,6 +5,7 @@ import { HealthChart } from "@/components/health/HealthChart";
 import { MacroLogger } from "@/components/health/MacroLogger";
 import { ProgressPhotos } from "@/components/health/ProgressPhotos";
 import { AIInsights } from "@/components/health/AIInsights";
+import { Hero } from "@/components/Hero";
 import { Button } from "@/components/ui/button";
 import { 
   Heart, 
@@ -17,7 +18,8 @@ import {
   Sun,
   MoonIcon,
   LogOut,
-  User
+  User,
+  BarChart3
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,7 +46,7 @@ const Index = () => {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // Mock health data - in real app this would come from APIs
@@ -88,10 +90,10 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold bg-gradient-wellness bg-clip-text text-transparent">
-                Health Dashboard
+                Fit360
               </h1>
               <p className="text-sm text-muted-foreground">
-                Track your wellness journey
+                Your Full Circle of Fitness
               </p>
             </div>
             <div className="flex items-center gap-2">
