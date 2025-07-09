@@ -5,8 +5,8 @@ import { HealthChart } from "@/components/health/HealthChart";
 import { MacroLogger } from "@/components/health/MacroLogger";
 import { ProgressPhotos } from "@/components/health/ProgressPhotos";
 import { AIInsights } from "@/components/health/AIInsights";
-import { Hero } from "@/components/Hero";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Heart, 
   Moon, 
@@ -14,12 +14,15 @@ import {
   Scale, 
   Footprints, 
   Zap,
-  Menu,
   Sun,
   MoonIcon,
   LogOut,
   User,
-  BarChart3
+  BarChart3,
+  TrendingUp,
+  Camera,
+  Utensils,
+  Brain
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
@@ -122,88 +125,147 @@ const Index = () => {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Health Metrics Grid */}
-        <section>
-          <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            Today's Metrics
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <MetricCard
-              title="Sleep Score"
-              value={mockHealthData.sleepScore}
-              unit="/100"
-              icon={Moon}
-              variant="primary"
-              trend={{ direction: "up", value: "+3%" }}
-            />
-            <MetricCard
-              title="Readiness"
-              value={mockHealthData.readiness}
-              unit="/100"
-              icon={Zap}
-              variant="secondary"
-              trend={{ direction: "down", value: "-2%" }}
-            />
-            <MetricCard
-              title="Weight"
-              value={mockHealthData.weight}
-              unit="lbs"
-              icon={Scale}
-              variant="success"
-              trend={{ direction: "down", value: "-0.3 lbs" }}
-            />
-            <MetricCard
-              title="Resting HR"
-              value={mockHealthData.restingHR}
-              unit="bpm"
-              icon={Heart}
-              variant="accent"
-              trend={{ direction: "neutral", value: "stable" }}
-            />
-            <MetricCard
-              title="HRV"
-              value={mockHealthData.hrv}
-              unit="ms"
-              icon={Activity}
-              variant="primary"
-              trend={{ direction: "up", value: "+8%" }}
-            />
-            <MetricCard
-              title="Steps"
-              value={mockHealthData.steps.toLocaleString()}
-              icon={Footprints}
-              variant="warning"
-              subtitle="Goal: 10,000"
-            />
+      <div className="container mx-auto px-4 py-6">
+        <Tabs defaultValue="today" className="space-y-6">
+          <div className="flex items-center justify-center">
+            <TabsList className="grid w-full max-w-md grid-cols-4 bg-muted/50 backdrop-blur-sm">
+              <TabsTrigger value="today" className="flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                <span className="hidden sm:inline">Today</span>
+              </TabsTrigger>
+              <TabsTrigger value="trends" className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                <span className="hidden sm:inline">Trends</span>
+              </TabsTrigger>
+              <TabsTrigger value="nutrition" className="flex items-center gap-2">
+                <Utensils className="h-4 w-4" />
+                <span className="hidden sm:inline">Nutrition</span>
+              </TabsTrigger>
+              <TabsTrigger value="insights" className="flex items-center gap-2">
+                <Brain className="h-4 w-4" />
+                <span className="hidden sm:inline">Insights</span>
+              </TabsTrigger>
+            </TabsList>
           </div>
-        </section>
 
-        {/* Charts Section */}
-        <section className="grid md:grid-cols-2 gap-6">
-          <HealthChart
-            title="Sleep Score (7 days)"
-            data={chartData}
-            color="hsl(var(--primary))"
-            type="area"
-            unit="/100"
-          />
-          <HealthChart
-            title="Weight Trend (7 days)"
-            data={chartData.map(d => ({ ...d, value: 175 + Math.random() * 2 }))}
-            color="hsl(var(--secondary))"
-            type="line"
-            unit=" lbs"
-          />
-        </section>
+          <TabsContent value="today" className="space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-semibold mb-2">Today's Overview</h2>
+              <p className="text-muted-foreground">Your current health metrics at a glance</p>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <MetricCard
+                title="Sleep Score"
+                value={mockHealthData.sleepScore}
+                unit="/100"
+                icon={Moon}
+                variant="primary"
+                trend={{ direction: "up", value: "+3%" }}
+              />
+              <MetricCard
+                title="Readiness"
+                value={mockHealthData.readiness}
+                unit="/100"
+                icon={Zap}
+                variant="secondary"
+                trend={{ direction: "down", value: "-2%" }}
+              />
+              <MetricCard
+                title="Weight"
+                value={mockHealthData.weight}
+                unit="lbs"
+                icon={Scale}
+                variant="success"
+                trend={{ direction: "down", value: "-0.3 lbs" }}
+              />
+              <MetricCard
+                title="Resting HR"
+                value={mockHealthData.restingHR}
+                unit="bpm"
+                icon={Heart}
+                variant="accent"
+                trend={{ direction: "neutral", value: "stable" }}
+              />
+              <MetricCard
+                title="HRV"
+                value={mockHealthData.hrv}
+                unit="ms"
+                icon={Activity}
+                variant="primary"
+                trend={{ direction: "up", value: "+8%" }}
+              />
+              <MetricCard
+                title="Steps"
+                value={mockHealthData.steps.toLocaleString()}
+                icon={Footprints}
+                variant="warning"
+                subtitle="Goal: 10,000"
+              />
+            </div>
+          </TabsContent>
 
-        {/* Bottom Grid */}
-        <section className="grid lg:grid-cols-3 gap-6">
-          <MacroLogger onSave={handleMacroSave} />
-          <ProgressPhotos onUpload={handlePhotoUpload} />
-          <AIInsights />
-        </section>
+          <TabsContent value="trends" className="space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-semibold mb-2">Trends & Analytics</h2>
+              <p className="text-muted-foreground">Track your progress over time</p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <HealthChart
+                title="Sleep Score (7 days)"
+                data={chartData}
+                color="hsl(var(--primary))"
+                type="area"
+                unit="/100"
+              />
+              <HealthChart
+                title="Weight Trend (7 days)"
+                data={chartData.map(d => ({ ...d, value: 175 + Math.random() * 2 }))}
+                color="hsl(var(--secondary))"
+                type="line"
+                unit=" lbs"
+              />
+              <HealthChart
+                title="Readiness Score (7 days)"
+                data={chartData.map(d => ({ ...d, value: 70 + Math.random() * 20 }))}
+                color="hsl(var(--accent))"
+                type="area"
+                unit="/100"
+              />
+              <HealthChart
+                title="HRV Trend (7 days)"
+                data={chartData.map(d => ({ ...d, value: 35 + Math.random() * 15 }))}
+                color="hsl(var(--success))"
+                type="line"
+                unit="ms"
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="nutrition" className="space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-semibold mb-2">Nutrition & Progress</h2>
+              <p className="text-muted-foreground">Log your meals and track your physique</p>
+            </div>
+            
+            <div className="grid lg:grid-cols-2 gap-6">
+              <MacroLogger onSave={handleMacroSave} />
+              <ProgressPhotos onUpload={handlePhotoUpload} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="insights" className="space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-semibold mb-2">AI Insights</h2>
+              <p className="text-muted-foreground">Personalized recommendations based on your data</p>
+            </div>
+            
+            <div className="max-w-2xl mx-auto">
+              <AIInsights />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
