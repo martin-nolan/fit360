@@ -22,15 +22,18 @@ import {
   TrendingUp,
   Camera,
   Utensils,
-  Brain
+  Brain,
+  RefreshCw
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
+import { useOuraData } from "@/hooks/useOuraData";
 
 const Index = () => {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
   const { user, signOut, loading } = useAuth();
+  const { metrics, chartData, isLoading: ouraLoading, isSyncing, syncOuraData } = useOuraData();
 
   useEffect(() => {
     setMounted(true);
@@ -52,18 +55,18 @@ const Index = () => {
     return <Navigate to="/" replace />;
   }
 
-  // Mock health data - in real app this would come from APIs
-  const mockHealthData = {
-    sleepScore: 85,
-    readiness: 78,
-    weight: 175.2,
-    restingHR: 48,
-    hrv: 42,
-    steps: 8547
+  // Health data from Oura or fallback to mock data
+  const healthData = {
+    sleepScore: metrics.sleepScore ?? 85,
+    readiness: metrics.readinessScore ?? 78,
+    weight: 175.2, // This would come from manual input or other sources
+    restingHR: 48, // This would come from HRV data in Oura
+    hrv: 42, // This would come from HRV data in Oura
+    steps: metrics.steps ?? 8547
   };
 
-  // Mock 7-day chart data
-  const chartData = [
+  // Chart data from Oura or fallback to mock data
+  const mockChartData = [
     { date: '2024-01-01', value: 82 },
     { date: '2024-01-02', value: 79 },
     { date: '2024-01-03', value: 85 },
@@ -103,6 +106,16 @@ const Index = () => {
               <span className="text-sm text-muted-foreground hidden md:block">
                 Welcome, {user.email}
               </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={syncOuraData}
+                disabled={isSyncing}
+                className="hover:bg-primary/10"
+                title="Sync Oura data"
+              >
+                <RefreshCw className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -157,7 +170,7 @@ const Index = () => {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <MetricCard
                 title="Sleep Score"
-                value={mockHealthData.sleepScore}
+                value={healthData.sleepScore}
                 unit="/100"
                 icon={Moon}
                 variant="primary"
@@ -165,7 +178,7 @@ const Index = () => {
               />
               <MetricCard
                 title="Readiness"
-                value={mockHealthData.readiness}
+                value={healthData.readiness}
                 unit="/100"
                 icon={Zap}
                 variant="secondary"
@@ -173,7 +186,7 @@ const Index = () => {
               />
               <MetricCard
                 title="Weight"
-                value={mockHealthData.weight}
+                value={healthData.weight}
                 unit="lbs"
                 icon={Scale}
                 variant="success"
@@ -181,7 +194,7 @@ const Index = () => {
               />
               <MetricCard
                 title="Resting HR"
-                value={mockHealthData.restingHR}
+                value={healthData.restingHR}
                 unit="bpm"
                 icon={Heart}
                 variant="accent"
@@ -189,7 +202,7 @@ const Index = () => {
               />
               <MetricCard
                 title="HRV"
-                value={mockHealthData.hrv}
+                value={healthData.hrv}
                 unit="ms"
                 icon={Activity}
                 variant="primary"
@@ -197,7 +210,7 @@ const Index = () => {
               />
               <MetricCard
                 title="Steps"
-                value={mockHealthData.steps.toLocaleString()}
+                value={healthData.steps.toLocaleString()}
                 icon={Footprints}
                 variant="warning"
                 subtitle="Goal: 10,000"
@@ -214,31 +227,31 @@ const Index = () => {
             <div className="grid md:grid-cols-2 gap-6">
               <HealthChart
                 title="Sleep Score (7 days)"
-                data={chartData}
+                data={chartData.sleep.length > 0 ? chartData.sleep : mockChartData}
                 color="hsl(var(--primary))"
                 type="area"
                 unit="/100"
               />
               <HealthChart
-                title="Weight Trend (7 days)"
-                data={chartData.map(d => ({ ...d, value: 175 + Math.random() * 2 }))}
-                color="hsl(var(--secondary))"
-                type="line"
-                unit=" lbs"
-              />
-              <HealthChart
                 title="Readiness Score (7 days)"
-                data={chartData.map(d => ({ ...d, value: 70 + Math.random() * 20 }))}
-                color="hsl(var(--accent))"
+                data={chartData.readiness.length > 0 ? chartData.readiness : mockChartData.map(d => ({ ...d, value: 70 + Math.random() * 20 }))}
+                color="hsl(var(--secondary))"
                 type="area"
                 unit="/100"
               />
               <HealthChart
-                title="HRV Trend (7 days)"
-                data={chartData.map(d => ({ ...d, value: 35 + Math.random() * 15 }))}
+                title="Steps (7 days)"
+                data={chartData.steps.length > 0 ? chartData.steps : mockChartData.map(d => ({ ...d, value: 6000 + Math.random() * 4000 }))}
+                color="hsl(var(--accent))"
+                type="line"
+                unit=""
+              />
+              <HealthChart
+                title="Weight Trend (7 days)"
+                data={mockChartData.map(d => ({ ...d, value: 175 + Math.random() * 2 }))}
                 color="hsl(var(--success))"
                 type="line"
-                unit="ms"
+                unit=" lbs"
               />
             </div>
           </TabsContent>
