@@ -113,6 +113,186 @@ export type Database = {
         }
         Relationships: []
       }
+      oura_personal_info: {
+        Row: {
+          age: number | null
+          biological_sex: string | null
+          country: string | null
+          created_at: string
+          email: string | null
+          height: number | null
+          id: string
+          oura_user_id: string
+          ring_model: string | null
+          updated_at: string
+          user_id: string
+          weight: number | null
+        }
+        Insert: {
+          age?: number | null
+          biological_sex?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          height?: number | null
+          id?: string
+          oura_user_id: string
+          ring_model?: string | null
+          updated_at?: string
+          user_id: string
+          weight?: number | null
+        }
+        Update: {
+          age?: number | null
+          biological_sex?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          height?: number | null
+          id?: string
+          oura_user_id?: string
+          ring_model?: string | null
+          updated_at?: string
+          user_id?: string
+          weight?: number | null
+        }
+        Relationships: []
+      }
+      oura_sessions: {
+        Row: {
+          average_hr: number | null
+          category: string | null
+          created_at: string
+          day: string | null
+          end_datetime: string | null
+          id: string
+          oura_session_id: string
+          session_data: Json | null
+          start_datetime: string | null
+          user_id: string
+        }
+        Insert: {
+          average_hr?: number | null
+          category?: string | null
+          created_at?: string
+          day?: string | null
+          end_datetime?: string | null
+          id?: string
+          oura_session_id: string
+          session_data?: Json | null
+          start_datetime?: string | null
+          user_id: string
+        }
+        Update: {
+          average_hr?: number | null
+          category?: string | null
+          created_at?: string
+          day?: string | null
+          end_datetime?: string | null
+          id?: string
+          oura_session_id?: string
+          session_data?: Json | null
+          start_datetime?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      oura_tags: {
+        Row: {
+          comment: string | null
+          created_at: string
+          day: string | null
+          end_datetime: string | null
+          id: string
+          oura_tag_id: string
+          repeat_daily: boolean | null
+          start_datetime: string | null
+          tags: string[] | null
+          text: string | null
+          timestamp_utc: string | null
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          day?: string | null
+          end_datetime?: string | null
+          id?: string
+          oura_tag_id: string
+          repeat_daily?: boolean | null
+          start_datetime?: string | null
+          tags?: string[] | null
+          text?: string | null
+          timestamp_utc?: string | null
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          day?: string | null
+          end_datetime?: string | null
+          id?: string
+          oura_tag_id?: string
+          repeat_daily?: boolean | null
+          start_datetime?: string | null
+          tags?: string[] | null
+          text?: string | null
+          timestamp_utc?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      oura_workouts: {
+        Row: {
+          activity: string | null
+          calories: number | null
+          created_at: string
+          day: string | null
+          distance: number | null
+          end_datetime: string | null
+          id: string
+          intensity: string | null
+          label: string | null
+          oura_workout_id: string
+          source: string | null
+          start_datetime: string | null
+          user_id: string
+          workout_data: Json | null
+        }
+        Insert: {
+          activity?: string | null
+          calories?: number | null
+          created_at?: string
+          day?: string | null
+          distance?: number | null
+          end_datetime?: string | null
+          id?: string
+          intensity?: string | null
+          label?: string | null
+          oura_workout_id: string
+          source?: string | null
+          start_datetime?: string | null
+          user_id: string
+          workout_data?: Json | null
+        }
+        Update: {
+          activity?: string | null
+          calories?: number | null
+          created_at?: string
+          day?: string | null
+          distance?: number | null
+          end_datetime?: string | null
+          id?: string
+          intensity?: string | null
+          label?: string | null
+          oura_workout_id?: string
+          source?: string | null
+          start_datetime?: string | null
+          user_id?: string
+          workout_data?: Json | null
+        }
+        Relationships: []
+      }
       photos: {
         Row: {
           created_at: string

@@ -9,6 +9,49 @@ interface OuraMetrics {
   activeCalories: number | null;
   totalCalories: number | null;
   activityScore: number | null;
+  stressScore: number | null;
+  resilienceScore: number | null;
+  cardiovascularAge: number | null;
+  vo2Max: number | null;
+  restingHeartRate: number | null;
+}
+
+interface OuraPersonalInfo {
+  age: number | null;
+  biologicalSex: string | null;
+  height: number | null;
+  weight: number | null;
+  country: string | null;
+  ringModel: string | null;
+}
+
+interface OuraWorkout {
+  id: string;
+  activity: string;
+  intensity: string;
+  calories: number;
+  distance: number;
+  label: string;
+  day: string;
+  start_datetime: string;
+  end_datetime: string;
+}
+
+interface OuraSession {
+  id: string;
+  category: string;
+  day: string;
+  start_datetime: string;
+  end_datetime: string;
+  average_hr: number;
+}
+
+interface OuraTag {
+  id: string;
+  day: string;
+  text: string;
+  tags: string[];
+  comment?: string;
 }
 
 interface ChartDataPoint {
@@ -24,15 +67,35 @@ export function useOuraData() {
     activeCalories: null,
     totalCalories: null,
     activityScore: null,
+    stressScore: null,
+    resilienceScore: null,
+    cardiovascularAge: null,
+    vo2Max: null,
+    restingHeartRate: null,
   });
+  const [personalInfo, setPersonalInfo] = useState<OuraPersonalInfo>({
+    age: null,
+    biologicalSex: null,
+    height: null,
+    weight: null,
+    country: null,
+    ringModel: null,
+  });
+  const [workouts, setWorkouts] = useState<OuraWorkout[]>([]);
+  const [sessions, setSessions] = useState<OuraSession[]>([]);
+  const [tags, setTags] = useState<OuraTag[]>([]);
   const [chartData, setChartData] = useState<{
     sleep: ChartDataPoint[];
     readiness: ChartDataPoint[];
     steps: ChartDataPoint[];
+    stress: ChartDataPoint[];
+    resilience: ChartDataPoint[];
   }>({
     sleep: [],
     readiness: [],
     steps: [],
+    stress: [],
+    resilience: [],
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -100,6 +163,11 @@ export function useOuraData() {
           activeCalories: metricsMap.active_calories || null,
           totalCalories: metricsMap.total_calories || null,
           activityScore: metricsMap.activity_score || null,
+          stressScore: metricsMap.stress_score || null,
+          resilienceScore: metricsMap.resilience_score || null,
+          cardiovascularAge: metricsMap.cardiovascular_age || null,
+          vo2Max: metricsMap.vo2_max || null,
+          restingHeartRate: metricsMap.resting_heart_rate || null,
         });
       }
 
@@ -111,7 +179,7 @@ export function useOuraData() {
         .eq('source', 'oura')
         .gte('timestamp', weekAgo)
         .lte('timestamp', today)
-        .in('type', ['sleep_score', 'readiness_score', 'steps'])
+        .in('type', ['sleep_score', 'readiness_score', 'steps', 'stress_score', 'resilience_score'])
         .order('timestamp', { ascending: true });
 
       if (chartError) {
@@ -120,6 +188,8 @@ export function useOuraData() {
         const sleepData: ChartDataPoint[] = [];
         const readinessData: ChartDataPoint[] = [];
         const stepsData: ChartDataPoint[] = [];
+        const stressData: ChartDataPoint[] = [];
+        const resilienceData: ChartDataPoint[] = [];
 
         chartMetrics?.forEach(metric => {
           const dataPoint = { date: metric.timestamp, value: metric.value };
@@ -134,6 +204,12 @@ export function useOuraData() {
             case 'steps':
               stepsData.push(dataPoint);
               break;
+            case 'stress_score':
+              stressData.push(dataPoint);
+              break;
+            case 'resilience_score':
+              resilienceData.push(dataPoint);
+              break;
           }
         });
 
@@ -141,7 +217,86 @@ export function useOuraData() {
           sleep: sleepData,
           readiness: readinessData,
           steps: stepsData,
+          stress: stressData,
+          resilience: resilienceData,
         });
+      }
+
+      // Fetch personal info
+      const { data: personalData, error: personalError } = await supabase
+        .from('oura_personal_info')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .single();
+
+      if (!personalError && personalData) {
+        setPersonalInfo({
+          age: personalData.age,
+          biologicalSex: personalData.biological_sex,
+          height: personalData.height,
+          weight: personalData.weight,
+          country: personalData.country,
+          ringModel: personalData.ring_model,
+        });
+      }
+
+      // Fetch recent workouts
+      const { data: workoutsData, error: workoutsError } = await supabase
+        .from('oura_workouts')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .gte('day', weekAgo)
+        .order('day', { ascending: false });
+
+      if (!workoutsError && workoutsData) {
+        setWorkouts(workoutsData.map(w => ({
+          id: w.oura_workout_id,
+          activity: w.activity,
+          intensity: w.intensity,
+          calories: w.calories,
+          distance: w.distance,
+          label: w.label,
+          day: w.day,
+          start_datetime: w.start_datetime,
+          end_datetime: w.end_datetime,
+        })));
+      }
+
+      // Fetch recent sessions
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('oura_sessions')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .gte('day', weekAgo)
+        .order('day', { ascending: false });
+
+      if (!sessionsError && sessionsData) {
+        setSessions(sessionsData.map(s => ({
+          id: s.oura_session_id,
+          category: s.category,
+          day: s.day,
+          start_datetime: s.start_datetime,
+          end_datetime: s.end_datetime,
+          average_hr: s.average_hr,
+        })));
+      }
+
+      // Fetch recent tags
+      const { data: tagsData, error: tagsError } = await supabase
+        .from('oura_tags')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .gte('day', weekAgo)
+        .order('day', { ascending: false });
+
+      if (!tagsError && tagsData) {
+        setTags(tagsData.map(t => ({
+          id: t.oura_tag_id,
+          day: t.day,
+          text: t.text,
+          tags: t.tags,
+          comment: t.comment,
+        })));
       }
     } catch (error) {
       console.error('Error fetching Oura data:', error);
@@ -156,6 +311,10 @@ export function useOuraData() {
 
   return {
     metrics,
+    personalInfo,
+    workouts,
+    sessions,
+    tags,
     chartData,
     isLoading,
     isSyncing,

@@ -5,6 +5,8 @@ import { HealthChart } from "@/components/health/HealthChart";
 import { MacroLogger } from "@/components/health/MacroLogger";
 import { ProgressPhotos } from "@/components/health/ProgressPhotos";
 import { AIInsights } from "@/components/health/AIInsights";
+import { WorkoutsList } from "@/components/health/WorkoutsList";
+import { SessionsList } from "@/components/health/SessionsList";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -33,7 +35,17 @@ const Index = () => {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
   const { user, signOut, loading } = useAuth();
-  const { metrics, chartData, isLoading: ouraLoading, isSyncing, syncOuraData } = useOuraData();
+  const { 
+    metrics, 
+    personalInfo, 
+    workouts, 
+    sessions, 
+    tags, 
+    chartData, 
+    isLoading: ouraLoading, 
+    isSyncing, 
+    syncOuraData 
+  } = useOuraData();
 
   useEffect(() => {
     setMounted(true);
@@ -265,6 +277,11 @@ const Index = () => {
             <div className="grid lg:grid-cols-2 gap-6">
               <MacroLogger onSave={handleMacroSave} />
               <ProgressPhotos onUpload={handlePhotoUpload} />
+            </div>
+            
+            <div className="grid lg:grid-cols-2 gap-6">
+              <WorkoutsList workouts={workouts} />
+              <SessionsList sessions={sessions} />
             </div>
           </TabsContent>
 

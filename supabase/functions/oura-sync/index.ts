@@ -13,7 +13,70 @@ interface OuraPersonalInfo {
   weight: number;
   height: number;
   biological_sex: string;
-  timezone: string;
+  country: string;
+  ring_model: string;
+  created_at: string;
+}
+
+interface OuraWorkout {
+  id: string;
+  activity: string;
+  intensity: string;
+  calories: number;
+  distance: number;
+  label: string;
+  source: string;
+  start_datetime: string;
+  end_datetime: string;
+  day: string;
+}
+
+interface OuraSession {
+  id: string;
+  category: string;
+  start_datetime: string;
+  end_datetime: string;
+  day: string;
+  average_hr: number;
+}
+
+interface OuraEnhancedTag {
+  id: string;
+  day: string;
+  timestamp: string;
+  text: string;
+  tags: string[];
+  comment?: string;
+  start_datetime?: string;
+  end_datetime?: string;
+  repeat_daily?: boolean;
+}
+
+interface OuraStress {
+  id: string;
+  day: string;
+  high_stress_duration: number;
+  average_stress_score: number;
+}
+
+interface OuraResilience {
+  id: string;
+  day: string;
+  resilience_score: number;
+}
+
+interface OuraCardiovascularAge {
+  id: string;
+  day: string;
+  cvo_age: number;
+  delta_years: number;
+}
+
+interface OuraVO2Max {
+  id: string;
+  day: string;
+  vo2_max: number;
+  timestamp: string;
 }
 
 interface OuraSleepData {
@@ -122,16 +185,32 @@ serve(async (req) => {
       'Content-Type': 'application/json',
     }
 
+    // Get date ranges for data sync
+    const today = new Date().toISOString().split('T')[0]
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
     // Sync personal info
     const personalResponse = await fetch(`${OURA_API_BASE}/personal_info`, { headers })
     if (personalResponse.ok) {
       const personalData: OuraPersonalInfo = await personalResponse.json()
-      console.log('Personal info synced:', personalData)
+      await supabaseClient
+        .from('oura_personal_info')
+        .upsert({
+          user_id: user.id,
+          oura_user_id: personalData.id,
+          age: personalData.age,
+          biological_sex: personalData.biological_sex,
+          height: personalData.height,
+          weight: personalData.weight,
+          email: personalData.email,
+          country: personalData.country,
+          ring_model: personalData.ring_model
+        }, {
+          onConflict: 'user_id'
+        })
+      console.log('Personal info synced')
     }
-
-    // Get today's date for data sync
-    const today = new Date().toISOString().split('T')[0]
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
     // Sync sleep data
     const sleepResponse = await fetch(
@@ -194,25 +273,208 @@ serve(async (req) => {
           { type: 'steps', value: activity.steps },
           { type: 'active_calories', value: activity.active_calories },
           { type: 'total_calories', value: activity.total_calories },
-          { type: 'activity_score', value: activity.score }
+          { type: 'activity_score', value: activity.score },
+          { type: 'resting_heart_rate', value: activity.contributors?.resting_heart_rate || null }
         ]
 
         for (const metric of metrics) {
-          await supabaseClient
-            .from('metrics')
-            .upsert({
-              user_id: user.id,
-              type: metric.type,
-              value: metric.value,
-              source: 'oura',
-              timestamp: activity.day,
-              value_json: activity
-            }, {
-              onConflict: 'user_id,type,source,timestamp'
-            })
+          if (metric.value !== null) {
+            await supabaseClient
+              .from('metrics')
+              .upsert({
+                user_id: user.id,
+                type: metric.type,
+                value: metric.value,
+                source: 'oura',
+                timestamp: activity.day,
+                value_json: activity
+              }, {
+                onConflict: 'user_id,type,source,timestamp'
+              })
+          }
         }
       }
       console.log(`Synced ${activityData.data.length} activity records`)
+    }
+
+    // Sync stress data
+    const stressResponse = await fetch(
+      `${OURA_API_BASE}/daily_stress?start_date=${weekAgo}&end_date=${today}`,
+      { headers }
+    )
+    if (stressResponse.ok) {
+      const stressData = await stressResponse.json()
+      for (const stress of stressData.data) {
+        await supabaseClient
+          .from('metrics')
+          .upsert({
+            user_id: user.id,
+            type: 'stress_score',
+            value: stress.average_stress_score,
+            source: 'oura',
+            timestamp: stress.day,
+            value_json: stress
+          }, {
+            onConflict: 'user_id,type,source,timestamp'
+          })
+      }
+      console.log(`Synced ${stressData.data.length} stress records`)
+    }
+
+    // Sync resilience data
+    const resilienceResponse = await fetch(
+      `${OURA_API_BASE}/daily_resilience?start_date=${weekAgo}&end_date=${today}`,
+      { headers }
+    )
+    if (resilienceResponse.ok) {
+      const resilienceData = await resilienceResponse.json()
+      for (const resilience of resilienceData.data) {
+        await supabaseClient
+          .from('metrics')
+          .upsert({
+            user_id: user.id,
+            type: 'resilience_score',
+            value: resilience.resilience_score,
+            source: 'oura',
+            timestamp: resilience.day,
+            value_json: resilience
+          }, {
+            onConflict: 'user_id,type,source,timestamp'
+          })
+      }
+      console.log(`Synced ${resilienceData.data.length} resilience records`)
+    }
+
+    // Sync cardiovascular age data
+    const cvAgeResponse = await fetch(
+      `${OURA_API_BASE}/daily_cardiovascular_age?start_date=${weekAgo}&end_date=${today}`,
+      { headers }
+    )
+    if (cvAgeResponse.ok) {
+      const cvAgeData = await cvAgeResponse.json()
+      for (const cvAge of cvAgeData.data) {
+        await supabaseClient
+          .from('metrics')
+          .upsert({
+            user_id: user.id,
+            type: 'cardiovascular_age',
+            value: cvAge.cvo_age,
+            source: 'oura',
+            timestamp: cvAge.day,
+            value_json: cvAge
+          }, {
+            onConflict: 'user_id,type,source,timestamp'
+          })
+      }
+      console.log(`Synced ${cvAgeData.data.length} cardiovascular age records`)
+    }
+
+    // Sync VO2 Max data
+    const vo2Response = await fetch(
+      `${OURA_API_BASE}/vO2_max?start_date=${monthAgo}&end_date=${today}`,
+      { headers }
+    )
+    if (vo2Response.ok) {
+      const vo2Data = await vo2Response.json()
+      for (const vo2 of vo2Data.data) {
+        await supabaseClient
+          .from('metrics')
+          .upsert({
+            user_id: user.id,
+            type: 'vo2_max',
+            value: vo2.vo2_max,
+            source: 'oura',
+            timestamp: vo2.day,
+            value_json: vo2
+          }, {
+            onConflict: 'user_id,type,source,timestamp'
+          })
+      }
+      console.log(`Synced ${vo2Data.data.length} VO2 Max records`)
+    }
+
+    // Sync workouts
+    const workoutResponse = await fetch(
+      `${OURA_API_BASE}/workout?start_date=${weekAgo}&end_date=${today}`,
+      { headers }
+    )
+    if (workoutResponse.ok) {
+      const workoutData = await workoutResponse.json()
+      for (const workout of workoutData.data) {
+        await supabaseClient
+          .from('oura_workouts')
+          .upsert({
+            user_id: user.id,
+            oura_workout_id: workout.id,
+            activity: workout.activity,
+            intensity: workout.intensity,
+            calories: workout.calories,
+            distance: workout.distance,
+            label: workout.label,
+            source: workout.source,
+            start_datetime: workout.start_datetime,
+            end_datetime: workout.end_datetime,
+            day: workout.day,
+            workout_data: workout
+          }, {
+            onConflict: 'user_id,oura_workout_id'
+          })
+      }
+      console.log(`Synced ${workoutData.data.length} workout records`)
+    }
+
+    // Sync sessions (meditation/rest)
+    const sessionResponse = await fetch(
+      `${OURA_API_BASE}/session?start_date=${weekAgo}&end_date=${today}`,
+      { headers }
+    )
+    if (sessionResponse.ok) {
+      const sessionData = await sessionResponse.json()
+      for (const session of sessionData.data) {
+        await supabaseClient
+          .from('oura_sessions')
+          .upsert({
+            user_id: user.id,
+            oura_session_id: session.id,
+            category: session.category,
+            start_datetime: session.start_datetime,
+            end_datetime: session.end_datetime,
+            day: session.day,
+            average_hr: session.average_hr,
+            session_data: session
+          }, {
+            onConflict: 'user_id,oura_session_id'
+          })
+      }
+      console.log(`Synced ${sessionData.data.length} session records`)
+    }
+
+    // Sync enhanced tags
+    const tagResponse = await fetch(
+      `${OURA_API_BASE}/enhanced_tag?start_date=${weekAgo}&end_date=${today}`,
+      { headers }
+    )
+    if (tagResponse.ok) {
+      const tagData = await tagResponse.json()
+      for (const tag of tagData.data) {
+        await supabaseClient
+          .from('oura_tags')
+          .upsert({
+            user_id: user.id,
+            oura_tag_id: tag.id,
+            day: tag.day,
+            timestamp_utc: tag.timestamp,
+            text: tag.text,
+            tags: tag.tags,
+            comment: tag.comment,
+            start_datetime: tag.start_datetime,
+            end_datetime: tag.end_datetime,
+            repeat_daily: tag.repeat_daily
+          }, {
+            onConflict: 'user_id,oura_tag_id'
+          })
+      }
+      console.log(`Synced ${tagData.data.length} tag records`)
     }
 
     return new Response(
