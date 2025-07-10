@@ -49,7 +49,11 @@ const Index = () => {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // Auto-sync on first load
+    if (mounted && !ouraLoading) {
+      syncOuraData();
+    }
+  }, [mounted, ouraLoading]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -77,16 +81,21 @@ const Index = () => {
     steps: metrics.steps ?? 8547
   };
 
-  // Chart data from Oura or fallback to mock data
-  const mockChartData = [
-    { date: '2024-01-01', value: 82 },
-    { date: '2024-01-02', value: 79 },
-    { date: '2024-01-03', value: 85 },
-    { date: '2024-01-04', value: 88 },
-    { date: '2024-01-05', value: 83 },
-    { date: '2024-01-06', value: 90 },
-    { date: '2024-01-07', value: 85 }
-  ];
+  // Generate recent mock chart data as fallback
+  const generateRecentMockData = () => {
+    const data = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      data.push({
+        date: date.toISOString().split('T')[0],
+        value: 75 + Math.random() * 20
+      });
+    }
+    return data;
+  };
+
+  const mockChartData = generateRecentMockData();
 
   const handleMacroSave = (entry: any) => {
     console.log('Macro entry saved:', entry);
@@ -153,7 +162,7 @@ const Index = () => {
       <div className="container mx-auto px-4 py-6">
         <Tabs defaultValue="today" className="space-y-6">
           <div className="flex items-center justify-center">
-            <TabsList className="grid w-full max-w-md grid-cols-4 bg-muted/50 backdrop-blur-sm">
+            <TabsList className="grid w-full max-w-2xl grid-cols-6 bg-muted/50 backdrop-blur-sm">
               <TabsTrigger value="today" className="flex items-center gap-2">
                 <Activity className="h-4 w-4" />
                 <span className="hidden sm:inline">Today</span>
@@ -165,6 +174,14 @@ const Index = () => {
               <TabsTrigger value="nutrition" className="flex items-center gap-2">
                 <Utensils className="h-4 w-4" />
                 <span className="hidden sm:inline">Nutrition</span>
+              </TabsTrigger>
+              <TabsTrigger value="wellness" className="flex items-center gap-2">
+                <Heart className="h-4 w-4" />
+                <span className="hidden sm:inline">Wellness</span>
+              </TabsTrigger>
+              <TabsTrigger value="profile" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">Profile</span>
               </TabsTrigger>
               <TabsTrigger value="insights" className="flex items-center gap-2">
                 <Brain className="h-4 w-4" />
@@ -285,6 +302,117 @@ const Index = () => {
             </div>
           </TabsContent>
 
+          <TabsContent value="wellness" className="space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-semibold mb-2">Wellness Metrics</h2>
+              <p className="text-muted-foreground">Advanced health and recovery data</p>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <MetricCard
+                title="Stress"
+                value={metrics.stressScore}
+                unit="/100"
+                icon={Zap}
+                variant="warning"
+                trend={{ direction: "down", value: "-5%" }}
+              />
+              <MetricCard
+                title="Resilience"
+                value={metrics.resilienceScore}
+                unit="/100"
+                icon={Activity}
+                variant="success"
+                trend={{ direction: "up", value: "+8%" }}
+              />
+              <MetricCard
+                title="CV Age"
+                value={metrics.cardiovascularAge}
+                unit=" years"
+                icon={Heart}
+                variant="accent"
+                trend={{ direction: "down", value: "-1 year" }}
+              />
+              <MetricCard
+                title="VO2 Max"
+                value={metrics.vo2Max}
+                unit=" ml/kg/min"
+                icon={Activity}
+                variant="primary"
+                trend={{ direction: "up", value: "+2%" }}
+              />
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <HealthChart
+                title="Stress Score (7 days)"
+                data={chartData.stress.length > 0 ? chartData.stress : mockChartData}
+                color="hsl(var(--warning))"
+                type="area"
+                unit="/100"
+              />
+              <HealthChart
+                title="Resilience Score (7 days)"
+                data={chartData.resilience.length > 0 ? chartData.resilience : mockChartData}
+                color="hsl(var(--success))"
+                type="area"
+                unit="/100"
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="profile" className="space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-semibold mb-2">Personal Information</h2>
+              <p className="text-muted-foreground">Your Oura profile and device details</p>
+            </div>
+            
+            <div className="max-w-md mx-auto">
+              <div className="grid grid-cols-2 gap-4">
+                <MetricCard
+                  title="Age"
+                  value={personalInfo.age || "N/A"}
+                  unit=" years"
+                  icon={User}
+                  variant="secondary"
+                />
+                <MetricCard
+                  title="Height"
+                  value={personalInfo.height ? Math.round(personalInfo.height) : "N/A"}
+                  unit=" cm"
+                  icon={BarChart3}
+                  variant="secondary"
+                />
+                <MetricCard
+                  title="Weight"
+                  value={personalInfo.weight ? personalInfo.weight.toFixed(1) : "N/A"}
+                  unit=" kg"
+                  icon={Scale}
+                  variant="secondary"
+                />
+                <MetricCard
+                  title="Ring Model"
+                  value={personalInfo.ringModel || "N/A"}
+                  icon={User}
+                  variant="secondary"
+                />
+              </div>
+              
+              {personalInfo.biologicalSex && (
+                <div className="mt-4 p-4 rounded-lg bg-muted/50">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Sex:</strong> {personalInfo.biologicalSex}
+                  </p>
+                  {personalInfo.country && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      <strong>Country:</strong> {personalInfo.country}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
           <TabsContent value="insights" className="space-y-6">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-semibold mb-2">AI Insights</h2>
@@ -292,7 +420,13 @@ const Index = () => {
             </div>
             
             <div className="max-w-2xl mx-auto">
-              <AIInsights />
+              <AIInsights 
+                insights={[]}
+                isLoading={ouraLoading}
+                metrics={metrics}
+                workouts={workouts}
+                sessions={sessions}
+              />
             </div>
           </TabsContent>
         </Tabs>

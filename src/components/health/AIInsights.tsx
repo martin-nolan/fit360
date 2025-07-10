@@ -17,9 +17,19 @@ interface AIInsightsProps {
   insights?: Insight[];
   isLoading?: boolean;
   className?: string;
+  metrics?: any;
+  workouts?: any[];
+  sessions?: any[];
 }
 
-export function AIInsights({ insights = [], isLoading = false, className }: AIInsightsProps) {
+export function AIInsights({ 
+  insights = [], 
+  isLoading = false, 
+  className, 
+  metrics, 
+  workouts = [],
+  sessions = []
+}: AIInsightsProps) {
   const getCategoryColor = (category?: string) => {
     switch (category) {
       case "sleep":
@@ -48,37 +58,147 @@ export function AIInsights({ insights = [], isLoading = false, className }: AIIn
     }
   };
 
-  const mockInsights: Insight[] = [
-    {
-      id: "1",
-      type: "daily",
-      title: "Recovery Status",
-      content: "Your HRV is 15% above baseline today, indicating excellent recovery. Consider a moderate-intensity workout to capitalize on your readiness.",
-      confidence: 92,
-      category: "recovery",
-      date: new Date().toISOString()
-    },
-    {
-      id: "2",
-      type: "recommendation",
-      title: "Sleep Optimization",
-      content: "You've been averaging 6.2 hours of sleep this week. Aim for 7-8 hours to improve your readiness scores and workout performance.",
-      confidence: 87,
-      category: "sleep",
-      date: new Date().toISOString()
-    },
-    {
-      id: "3",
-      type: "weekly",
-      title: "Weight Loss Progress",
-      content: "You're down 0.8 lbs this week while maintaining strength metrics. Your current deficit appears optimal for lean mass retention.",
-      confidence: 89,
-      category: "nutrition",
-      date: new Date().toISOString()
+  const generateInsights = (): Insight[] => {
+    const generatedInsights: Insight[] = [];
+    
+    // Sleep insights
+    if (metrics?.sleepScore) {
+      const sleepScore = metrics.sleepScore;
+      let sleepContent = "";
+      let sleepConfidence = 85;
+      
+      if (sleepScore >= 85) {
+        sleepContent = `Excellent sleep score of ${sleepScore}/100! Your body is well-recovered and ready for high-intensity training.`;
+        sleepConfidence = 95;
+      } else if (sleepScore >= 70) {
+        sleepContent = `Good sleep score of ${sleepScore}/100. Consider going to bed 30 minutes earlier to optimize recovery.`;
+        sleepConfidence = 88;
+      } else {
+        sleepContent = `Sleep score of ${sleepScore}/100 indicates poor recovery. Prioritize 7-9 hours of sleep tonight.`;
+        sleepConfidence = 92;
+      }
+      
+      generatedInsights.push({
+        id: "sleep",
+        type: "daily",
+        title: "Sleep Analysis",
+        content: sleepContent,
+        confidence: sleepConfidence,
+        category: "sleep",
+        date: new Date().toISOString()
+      });
     }
-  ];
 
-  const displayInsights = insights.length > 0 ? insights : mockInsights;
+    // Readiness insights
+    if (metrics?.readinessScore) {
+      const readiness = metrics.readinessScore;
+      let readinessContent = "";
+      
+      if (readiness >= 85) {
+        readinessContent = `Outstanding readiness score of ${readiness}/100! Perfect day for challenging workouts or setting PRs.`;
+      } else if (readiness >= 70) {
+        readinessContent = `Moderate readiness of ${readiness}/100. Light to moderate exercise recommended today.`;
+      } else {
+        readinessContent = `Low readiness of ${readiness}/100. Focus on recovery activities like walking or gentle stretching.`;
+      }
+      
+      generatedInsights.push({
+        id: "readiness",
+        type: "daily",
+        title: "Training Readiness",
+        content: readinessContent,
+        confidence: 90,
+        category: "recovery",
+        date: new Date().toISOString()
+      });
+    }
+
+    // Activity insights
+    if (metrics?.steps) {
+      const steps = metrics.steps;
+      let activityContent = "";
+      
+      if (steps >= 10000) {
+        activityContent = `Great job! You've taken ${steps.toLocaleString()} steps today, exceeding the 10,000 step goal.`;
+      } else {
+        const remaining = 10000 - steps;
+        activityContent = `You're ${remaining.toLocaleString()} steps away from your 10,000 step goal. A 15-minute walk should get you there!`;
+      }
+      
+      generatedInsights.push({
+        id: "activity",
+        type: "daily",
+        title: "Daily Activity",
+        content: activityContent,
+        confidence: 95,
+        category: "fitness",
+        date: new Date().toISOString()
+      });
+    }
+
+    // Stress insights
+    if (metrics?.stressScore) {
+      const stress = metrics.stressScore;
+      let stressContent = "";
+      
+      if (stress <= 25) {
+        stressContent = `Low stress level of ${stress}/100. Your body is managing stress well - great for recovery!`;
+      } else if (stress <= 50) {
+        stressContent = `Moderate stress level of ${stress}/100. Consider meditation or breathing exercises.`;
+      } else {
+        stressContent = `Elevated stress level of ${stress}/100. Prioritize relaxation and avoid intense training today.`;
+      }
+      
+      generatedInsights.push({
+        id: "stress",
+        type: "daily",
+        title: "Stress Management",
+        content: stressContent,
+        confidence: 87,
+        category: "recovery",
+        date: new Date().toISOString()
+      });
+    }
+
+    // Workout insights
+    if (workouts.length > 0) {
+      const recentWorkout = workouts[0];
+      const workoutContent = `Last workout: ${recentWorkout.activity} for ${recentWorkout.calories} calories. ${
+        recentWorkout.intensity === 'high' ? 'High intensity session - ensure adequate recovery.' :
+        recentWorkout.intensity === 'moderate' ? 'Good moderate intensity training.' :
+        'Light session - consider increasing intensity when ready.'
+      }`;
+      
+      generatedInsights.push({
+        id: "workout",
+        type: "weekly",
+        title: "Workout Summary",
+        content: workoutContent,
+        confidence: 83,
+        category: "fitness",
+        date: new Date().toISOString()
+      });
+    }
+
+    // Default insights if no data
+    if (generatedInsights.length === 0) {
+      return [
+        {
+          id: "sync",
+          type: "recommendation",
+          title: "Sync Your Data",
+          content: "Connect your Oura ring and sync your data to get personalized AI insights based on your sleep, activity, and recovery metrics.",
+          confidence: 100,
+          category: "sleep",
+          date: new Date().toISOString()
+        }
+      ];
+    }
+
+    return generatedInsights;
+  };
+
+  const displayInsights = insights.length > 0 ? insights : generateInsights();
 
   if (isLoading) {
     return (
