@@ -213,14 +213,18 @@ serve(async (req) => {
     }
 
     // Sync sleep data
+    console.log('Fetching sleep data from Oura API...')
     const sleepResponse = await fetch(
       `${OURA_API_BASE}/daily_sleep?start_date=${weekAgo}&end_date=${today}`,
       { headers }
     )
+    console.log('Sleep response status:', sleepResponse.status)
     if (sleepResponse.ok) {
       const sleepData = await sleepResponse.json()
-      for (const sleep of sleepData.data) {
-        await supabaseClient
+      console.log(`Received ${sleepData.data?.length || 0} sleep records from Oura`)
+      for (const sleep of sleepData.data || []) {
+        console.log('Processing sleep record:', sleep.id, 'score:', sleep.score, 'day:', sleep.day)
+        const result = await supabaseClient
           .from('metrics')
           .upsert({
             user_id: user.id,
@@ -232,19 +236,29 @@ serve(async (req) => {
           }, {
             onConflict: 'user_id,type,source,timestamp'
           })
+        if (result.error) {
+          console.error('Error inserting sleep metric:', result.error)
+        }
       }
-      console.log(`Synced ${sleepData.data.length} sleep records`)
+      console.log(`Synced ${sleepData.data?.length || 0} sleep records`)
+    } else {
+      const errorText = await sleepResponse.text()
+      console.error('Sleep API error:', sleepResponse.status, errorText)
     }
 
     // Sync readiness data
+    console.log('Fetching readiness data from Oura API...')
     const readinessResponse = await fetch(
       `${OURA_API_BASE}/daily_readiness?start_date=${weekAgo}&end_date=${today}`,
       { headers }
     )
+    console.log('Readiness response status:', readinessResponse.status)
     if (readinessResponse.ok) {
       const readinessData = await readinessResponse.json()
-      for (const readiness of readinessData.data) {
-        await supabaseClient
+      console.log(`Received ${readinessData.data?.length || 0} readiness records from Oura`)
+      for (const readiness of readinessData.data || []) {
+        console.log('Processing readiness record:', readiness.id, 'score:', readiness.score, 'day:', readiness.day)
+        const result = await supabaseClient
           .from('metrics')
           .upsert({
             user_id: user.id,
@@ -256,18 +270,29 @@ serve(async (req) => {
           }, {
             onConflict: 'user_id,type,source,timestamp'
           })
+        if (result.error) {
+          console.error('Error inserting readiness metric:', result.error)
+        }
       }
-      console.log(`Synced ${readinessData.data.length} readiness records`)
+      console.log(`Synced ${readinessData.data?.length || 0} readiness records`)
+    } else {
+      const errorText = await readinessResponse.text()
+      console.error('Readiness API error:', readinessResponse.status, errorText)
     }
 
     // Sync activity data
+    console.log('Fetching activity data from Oura API...')
     const activityResponse = await fetch(
       `${OURA_API_BASE}/daily_activity?start_date=${weekAgo}&end_date=${today}`,
       { headers }
     )
+    console.log('Activity response status:', activityResponse.status)
     if (activityResponse.ok) {
       const activityData = await activityResponse.json()
-      for (const activity of activityData.data) {
+      console.log(`Received ${activityData.data?.length || 0} activity records from Oura`)
+      for (const activity of activityData.data || []) {
+        console.log('Processing activity record:', activity.id, 'steps:', activity.steps, 'day:', activity.day)
+        
         // Store multiple metrics from activity data
         const metrics = [
           { type: 'steps', value: activity.steps },
@@ -278,8 +303,8 @@ serve(async (req) => {
         ]
 
         for (const metric of metrics) {
-          if (metric.value !== null) {
-            await supabaseClient
+          if (metric.value !== null && metric.value !== undefined) {
+            const result = await supabaseClient
               .from('metrics')
               .upsert({
                 user_id: user.id,
@@ -291,10 +316,16 @@ serve(async (req) => {
               }, {
                 onConflict: 'user_id,type,source,timestamp'
               })
+            if (result.error) {
+              console.error(`Error inserting ${metric.type} metric:`, result.error)
+            }
           }
         }
       }
-      console.log(`Synced ${activityData.data.length} activity records`)
+      console.log(`Synced ${activityData.data?.length || 0} activity records`)
+    } else {
+      const errorText = await activityResponse.text()
+      console.error('Activity API error:', activityResponse.status, errorText)
     }
 
     // Sync stress data
