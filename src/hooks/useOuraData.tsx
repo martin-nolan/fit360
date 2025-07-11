@@ -137,18 +137,19 @@ export function useOuraData() {
       const today = new Date().toISOString().split('T')[0];
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-      // Fetch latest metrics for today
+      // Fetch latest metrics - get most recent data for each metric type
       const { data: latestMetrics, error: latestError } = await supabase
         .from('metrics')
         .select('type, value, timestamp')
         .eq('user_id', user.user.id)
         .eq('source', 'oura')
-        .gte('timestamp', today)
+        .gte('timestamp', weekAgo)
         .order('timestamp', { ascending: false });
 
       if (latestError) {
         console.error('Error fetching latest metrics:', latestError);
       } else {
+        // Get the most recent value for each metric type
         const metricsMap: { [key: string]: number } = {};
         latestMetrics?.forEach(metric => {
           if (!metricsMap[metric.type]) {
