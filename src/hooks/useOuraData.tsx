@@ -135,7 +135,7 @@ export function useOuraData() {
       if (!user.user) return;
 
       const today = new Date().toISOString().split('T')[0];
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       // Fetch latest metrics - get most recent data for each metric type
       const { data: latestMetrics, error: latestError } = await supabase
@@ -143,7 +143,7 @@ export function useOuraData() {
         .select('type, value, timestamp')
         .eq('user_id', user.user.id)
         .eq('source', 'oura')
-        .gte('timestamp', weekAgo)
+        .gte('timestamp', monthAgo)
         .order('timestamp', { ascending: false });
 
       if (latestError) {
@@ -172,13 +172,13 @@ export function useOuraData() {
         });
       }
 
-      // Fetch 7-day chart data
+      // Fetch month chart data for trends
       const { data: chartMetrics, error: chartError } = await supabase
         .from('metrics')
         .select('type, value, timestamp')
         .eq('user_id', user.user.id)
         .eq('source', 'oura')
-        .gte('timestamp', weekAgo)
+        .gte('timestamp', monthAgo)
         .lte('timestamp', today)
         .in('type', ['sleep_score', 'readiness_score', 'steps', 'stress_score', 'resilience_score'])
         .order('timestamp', { ascending: true });
@@ -246,7 +246,7 @@ export function useOuraData() {
         .from('oura_workouts')
         .select('*')
         .eq('user_id', user.user.id)
-        .gte('day', weekAgo)
+        .gte('day', monthAgo)
         .order('day', { ascending: false });
 
       if (!workoutsError && workoutsData) {
@@ -268,7 +268,7 @@ export function useOuraData() {
         .from('oura_sessions')
         .select('*')
         .eq('user_id', user.user.id)
-        .gte('day', weekAgo)
+        .gte('day', monthAgo)
         .order('day', { ascending: false });
 
       if (!sessionsError && sessionsData) {
@@ -287,7 +287,7 @@ export function useOuraData() {
         .from('oura_tags')
         .select('*')
         .eq('user_id', user.user.id)
-        .gte('day', weekAgo)
+        .gte('day', monthAgo)
         .order('day', { ascending: false });
 
       if (!tagsError && tagsData) {

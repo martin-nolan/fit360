@@ -185,9 +185,8 @@ serve(async (req) => {
       'Content-Type': 'application/json',
     }
 
-    // Get date ranges for data sync
+    // Get date ranges for data sync (past month)
     const today = new Date().toISOString().split('T')[0]
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
     // Sync personal info
@@ -212,131 +211,19 @@ serve(async (req) => {
       console.log('Personal info synced')
     }
 
-    // Sync sleep data
-    console.log('Fetching sleep data from Oura API...')
-    const sleepResponse = await fetch(
-      `${OURA_API_BASE}/daily_sleep?start_date=${weekAgo}&end_date=${today}`,
-      { headers }
-    )
-    console.log('Sleep response status:', sleepResponse.status)
-    if (sleepResponse.ok) {
-      const sleepData = await sleepResponse.json()
-      console.log(`Received ${sleepData.data?.length || 0} sleep records from Oura`)
-      for (const sleep of sleepData.data || []) {
-        console.log('Processing sleep record:', sleep.id, 'score:', sleep.score, 'day:', sleep.day)
-        const result = await supabaseClient
-          .from('metrics')
-          .upsert({
-            user_id: user.id,
-            type: 'sleep_score',
-            value: sleep.score,
-            source: 'oura',
-            timestamp: sleep.day,
-            value_json: sleep
-          }, {
-            onConflict: 'user_id,type,source,timestamp'
-          })
-        if (result.error) {
-          console.error('Error inserting sleep metric:', result.error)
-        }
-      }
-      console.log(`Synced ${sleepData.data?.length || 0} sleep records`)
-    } else {
-      const errorText = await sleepResponse.text()
-      console.error('Sleep API error:', sleepResponse.status, errorText)
-    }
-
-    // Sync readiness data
-    console.log('Fetching readiness data from Oura API...')
-    const readinessResponse = await fetch(
-      `${OURA_API_BASE}/daily_readiness?start_date=${weekAgo}&end_date=${today}`,
-      { headers }
-    )
-    console.log('Readiness response status:', readinessResponse.status)
-    if (readinessResponse.ok) {
-      const readinessData = await readinessResponse.json()
-      console.log(`Received ${readinessData.data?.length || 0} readiness records from Oura`)
-      for (const readiness of readinessData.data || []) {
-        console.log('Processing readiness record:', readiness.id, 'score:', readiness.score, 'day:', readiness.day)
-        const result = await supabaseClient
-          .from('metrics')
-          .upsert({
-            user_id: user.id,
-            type: 'readiness_score',
-            value: readiness.score,
-            source: 'oura',
-            timestamp: readiness.day,
-            value_json: readiness
-          }, {
-            onConflict: 'user_id,type,source,timestamp'
-          })
-        if (result.error) {
-          console.error('Error inserting readiness metric:', result.error)
-        }
-      }
-      console.log(`Synced ${readinessData.data?.length || 0} readiness records`)
-    } else {
-      const errorText = await readinessResponse.text()
-      console.error('Readiness API error:', readinessResponse.status, errorText)
-    }
-
-    // Sync activity data
-    console.log('Fetching activity data from Oura API...')
-    const activityResponse = await fetch(
-      `${OURA_API_BASE}/daily_activity?start_date=${weekAgo}&end_date=${today}`,
-      { headers }
-    )
-    console.log('Activity response status:', activityResponse.status)
-    if (activityResponse.ok) {
-      const activityData = await activityResponse.json()
-      console.log(`Received ${activityData.data?.length || 0} activity records from Oura`)
-      for (const activity of activityData.data || []) {
-        console.log('Processing activity record:', activity.id, 'steps:', activity.steps, 'day:', activity.day)
-        
-        // Store multiple metrics from activity data
-        const metrics = [
-          { type: 'steps', value: activity.steps },
-          { type: 'active_calories', value: activity.active_calories },
-          { type: 'total_calories', value: activity.total_calories },
-          { type: 'activity_score', value: activity.score },
-          { type: 'resting_heart_rate', value: activity.contributors?.resting_heart_rate || null }
-        ]
-
-        for (const metric of metrics) {
-          if (metric.value !== null && metric.value !== undefined) {
-            const result = await supabaseClient
-              .from('metrics')
-              .upsert({
-                user_id: user.id,
-                type: metric.type,
-                value: metric.value,
-                source: 'oura',
-                timestamp: activity.day,
-                value_json: activity
-              }, {
-                onConflict: 'user_id,type,source,timestamp'
-              })
-            if (result.error) {
-              console.error(`Error inserting ${metric.type} metric:`, result.error)
-            }
-          }
-        }
-      }
-      console.log(`Synced ${activityData.data?.length || 0} activity records`)
-    } else {
-      const errorText = await activityResponse.text()
-      console.error('Activity API error:', activityResponse.status, errorText)
-    }
-
     // Sync stress data
+    console.log('Fetching stress data from Oura API...')
     const stressResponse = await fetch(
-      `${OURA_API_BASE}/daily_stress?start_date=${weekAgo}&end_date=${today}`,
+      `${OURA_API_BASE}/daily_stress?start_date=${monthAgo}&end_date=${today}`,
       { headers }
     )
+    console.log('Stress response status:', stressResponse.status)
     if (stressResponse.ok) {
       const stressData = await stressResponse.json()
-      for (const stress of stressData.data) {
-        await supabaseClient
+      console.log(`Received ${stressData.data?.length || 0} stress records from Oura`)
+      for (const stress of stressData.data || []) {
+        console.log('Processing stress record:', stress.id, 'score:', stress.average_stress_score, 'day:', stress.day)
+        const result = await supabaseClient
           .from('metrics')
           .upsert({
             user_id: user.id,
@@ -348,19 +235,28 @@ serve(async (req) => {
           }, {
             onConflict: 'user_id,type,source,timestamp'
           })
+        if (result.error) {
+          console.error('Error inserting stress metric:', result.error)
+        }
       }
-      console.log(`Synced ${stressData.data.length} stress records`)
+      console.log(`Synced ${stressData.data?.length || 0} stress records`)
+    } else {
+      const errorText = await stressResponse.text()
+      console.error('Stress API error:', stressResponse.status, errorText)
     }
-
     // Sync resilience data
+    console.log('Fetching resilience data from Oura API...')
     const resilienceResponse = await fetch(
-      `${OURA_API_BASE}/daily_resilience?start_date=${weekAgo}&end_date=${today}`,
+      `${OURA_API_BASE}/daily_resilience?start_date=${monthAgo}&end_date=${today}`,
       { headers }
     )
+    console.log('Resilience response status:', resilienceResponse.status)
     if (resilienceResponse.ok) {
       const resilienceData = await resilienceResponse.json()
-      for (const resilience of resilienceData.data) {
-        await supabaseClient
+      console.log(`Received ${resilienceData.data?.length || 0} resilience records from Oura`)
+      for (const resilience of resilienceData.data || []) {
+        console.log('Processing resilience record:', resilience.id, 'score:', resilience.resilience_score, 'day:', resilience.day)
+        const result = await supabaseClient
           .from('metrics')
           .upsert({
             user_id: user.id,
@@ -372,19 +268,29 @@ serve(async (req) => {
           }, {
             onConflict: 'user_id,type,source,timestamp'
           })
+        if (result.error) {
+          console.error('Error inserting resilience metric:', result.error)
+        }
       }
-      console.log(`Synced ${resilienceData.data.length} resilience records`)
+      console.log(`Synced ${resilienceData.data?.length || 0} resilience records`)
+    } else {
+      const errorText = await resilienceResponse.text()
+      console.error('Resilience API error:', resilienceResponse.status, errorText)
     }
 
     // Sync cardiovascular age data
+    console.log('Fetching cardiovascular age data from Oura API...')
     const cvAgeResponse = await fetch(
-      `${OURA_API_BASE}/daily_cardiovascular_age?start_date=${weekAgo}&end_date=${today}`,
+      `${OURA_API_BASE}/daily_cardiovascular_age?start_date=${monthAgo}&end_date=${today}`,
       { headers }
     )
+    console.log('Cardiovascular age response status:', cvAgeResponse.status)
     if (cvAgeResponse.ok) {
       const cvAgeData = await cvAgeResponse.json()
-      for (const cvAge of cvAgeData.data) {
-        await supabaseClient
+      console.log(`Received ${cvAgeData.data?.length || 0} cardiovascular age records from Oura`)
+      for (const cvAge of cvAgeData.data || []) {
+        console.log('Processing CV age record:', cvAge.id, 'age:', cvAge.cvo_age, 'day:', cvAge.day)
+        const result = await supabaseClient
           .from('metrics')
           .upsert({
             user_id: user.id,
@@ -396,19 +302,29 @@ serve(async (req) => {
           }, {
             onConflict: 'user_id,type,source,timestamp'
           })
+        if (result.error) {
+          console.error('Error inserting cardiovascular age metric:', result.error)
+        }
       }
-      console.log(`Synced ${cvAgeData.data.length} cardiovascular age records`)
+      console.log(`Synced ${cvAgeData.data?.length || 0} cardiovascular age records`)
+    } else {
+      const errorText = await cvAgeResponse.text()
+      console.error('Cardiovascular age API error:', cvAgeResponse.status, errorText)
     }
 
     // Sync VO2 Max data
+    console.log('Fetching VO2 Max data from Oura API...')
     const vo2Response = await fetch(
       `${OURA_API_BASE}/vO2_max?start_date=${monthAgo}&end_date=${today}`,
       { headers }
     )
+    console.log('VO2 Max response status:', vo2Response.status)
     if (vo2Response.ok) {
       const vo2Data = await vo2Response.json()
-      for (const vo2 of vo2Data.data) {
-        await supabaseClient
+      console.log(`Received ${vo2Data.data?.length || 0} VO2 Max records from Oura`)
+      for (const vo2 of vo2Data.data || []) {
+        console.log('Processing VO2 Max record:', vo2.id, 'vo2_max:', vo2.vo2_max, 'day:', vo2.day)
+        const result = await supabaseClient
           .from('metrics')
           .upsert({
             user_id: user.id,
@@ -420,19 +336,29 @@ serve(async (req) => {
           }, {
             onConflict: 'user_id,type,source,timestamp'
           })
+        if (result.error) {
+          console.error('Error inserting VO2 Max metric:', result.error)
+        }
       }
-      console.log(`Synced ${vo2Data.data.length} VO2 Max records`)
+      console.log(`Synced ${vo2Data.data?.length || 0} VO2 Max records`)
+    } else {
+      const errorText = await vo2Response.text()
+      console.error('VO2 Max API error:', vo2Response.status, errorText)
     }
 
     // Sync workouts
+    console.log('Fetching workout data from Oura API...')
     const workoutResponse = await fetch(
-      `${OURA_API_BASE}/workout?start_date=${weekAgo}&end_date=${today}`,
+      `${OURA_API_BASE}/workout?start_date=${monthAgo}&end_date=${today}`,
       { headers }
     )
+    console.log('Workout response status:', workoutResponse.status)
     if (workoutResponse.ok) {
       const workoutData = await workoutResponse.json()
-      for (const workout of workoutData.data) {
-        await supabaseClient
+      console.log(`Received ${workoutData.data?.length || 0} workout records from Oura`)
+      for (const workout of workoutData.data || []) {
+        console.log('Processing workout record:', workout.id, 'activity:', workout.activity, 'day:', workout.day)
+        const result = await supabaseClient
           .from('oura_workouts')
           .upsert({
             user_id: user.id,
@@ -450,19 +376,29 @@ serve(async (req) => {
           }, {
             onConflict: 'user_id,oura_workout_id'
           })
+        if (result.error) {
+          console.error('Error inserting workout:', result.error)
+        }
       }
-      console.log(`Synced ${workoutData.data.length} workout records`)
+      console.log(`Synced ${workoutData.data?.length || 0} workout records`)
+    } else {
+      const errorText = await workoutResponse.text()
+      console.error('Workout API error:', workoutResponse.status, errorText)
     }
 
     // Sync sessions (meditation/rest)
+    console.log('Fetching session data from Oura API...')
     const sessionResponse = await fetch(
-      `${OURA_API_BASE}/session?start_date=${weekAgo}&end_date=${today}`,
+      `${OURA_API_BASE}/session?start_date=${monthAgo}&end_date=${today}`,
       { headers }
     )
+    console.log('Session response status:', sessionResponse.status)
     if (sessionResponse.ok) {
       const sessionData = await sessionResponse.json()
-      for (const session of sessionData.data) {
-        await supabaseClient
+      console.log(`Received ${sessionData.data?.length || 0} session records from Oura`)
+      for (const session of sessionData.data || []) {
+        console.log('Processing session record:', session.id, 'category:', session.category, 'day:', session.day)
+        const result = await supabaseClient
           .from('oura_sessions')
           .upsert({
             user_id: user.id,
@@ -476,13 +412,20 @@ serve(async (req) => {
           }, {
             onConflict: 'user_id,oura_session_id'
           })
+        if (result.error) {
+          console.error('Error inserting session:', result.error)
+        }
       }
-      console.log(`Synced ${sessionData.data.length} session records`)
+      console.log(`Synced ${sessionData.data?.length || 0} session records`)
+    } else {
+      const errorText = await sessionResponse.text()
+      console.error('Session API error:', sessionResponse.status, errorText)
     }
 
     // Sync enhanced tags
+    console.log('Fetching enhanced tag data from Oura API...')
     const tagResponse = await fetch(
-      `${OURA_API_BASE}/enhanced_tag?start_date=${weekAgo}&end_date=${today}`,
+      `${OURA_API_BASE}/enhanced_tag?start_date=${monthAgo}&end_date=${today}`,
       { headers }
     )
     if (tagResponse.ok) {
