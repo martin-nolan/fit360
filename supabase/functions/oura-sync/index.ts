@@ -210,9 +210,129 @@ serve(async (req) => {
         })
       console.log('Personal info synced')
     }
+    // Sync sleep data
+    console.log('Fetching sleep data from Oura API...')
+    const sleepResponse = await fetch(
+      `${OURA_API_BASE}/daily_sleep?start_date=${monthAgo}&end_date=${today}`,
+      { headers }
+    )
+    console.log('Sleep response status:', sleepResponse.status)
+    if (sleepResponse.ok) {
+      const sleepData = await sleepResponse.json()
+      console.log(`Received ${sleepData.data?.length || 0} sleep records from Oura`)
+      for (const sleep of sleepData.data || []) {
+        const result = await supabaseClient
+          .from('metrics')
+          .upsert({
+            user_id: user.id,
+            type: 'sleep_score',
+            value: sleep.score,
+            source: 'oura',
+            timestamp: sleep.day,
+            value_json: sleep
+          }, {
+            onConflict: 'user_id,type,source,timestamp'
+          })
+        if (result.error) {
+          console.error('Error inserting sleep metric:', result.error)
+        }
+      }
+      console.log(`Synced ${sleepData.data?.length || 0} sleep records`)
+    } else {
+      const errorText = await sleepResponse.text()
+      console.error('Sleep API error:', sleepResponse.status, errorText)
+    }
 
-    // Sync stress data
-    console.log('Fetching stress data from Oura API...')
+    // Sync readiness data
+    console.log('Fetching readiness data from Oura API...')
+    const readinessResponse = await fetch(
+      `${OURA_API_BASE}/daily_readiness?start_date=${monthAgo}&end_date=${today}`,
+      { headers }
+    )
+    console.log('Readiness response status:', readinessResponse.status)
+    if (readinessResponse.ok) {
+      const readinessData = await readinessResponse.json()
+      console.log(`Received ${readinessData.data?.length || 0} readiness records from Oura`)
+      for (const readiness of readinessData.data || []) {
+        // readiness score
+        const res1 = await supabaseClient
+          .from('metrics')
+          .upsert({
+            user_id: user.id,
+            type: 'readiness_score',
+            value: readiness.score,
+            source: 'oura',
+            timestamp: readiness.day,
+            value_json: readiness
+          }, {
+            onConflict: 'user_id,type,source,timestamp'
+          })
+        if (res1.error) console.error('Error inserting readiness metric:', res1.error)
+
+        // resting heart rate if provided via contributors
+        const rhr = readiness?.contributors?.resting_heart_rate
+        if (typeof rhr === 'number') {
+          const res2 = await supabaseClient
+            .from('metrics')
+            .upsert({
+              user_id: user.id,
+              type: 'resting_heart_rate',
+              value: rhr,
+              source: 'oura',
+              timestamp: readiness.day,
+              value_json: readiness
+            }, {
+              onConflict: 'user_id,type,source,timestamp'
+            })
+          if (res2.error) console.error('Error inserting resting_heart_rate metric:', res2.error)
+        }
+      }
+      console.log(`Synced ${readinessData.data?.length || 0} readiness records`)
+    } else {
+      const errorText = await readinessResponse.text()
+      console.error('Readiness API error:', readinessResponse.status, errorText)
+    }
+
+    // Sync activity data (score, steps, calories)
+    console.log('Fetching activity data from Oura API...')
+    const activityResponse = await fetch(
+      `${OURA_API_BASE}/daily_activity?start_date=${monthAgo}&end_date=${today}`,
+      { headers }
+    )
+    console.log('Activity response status:', activityResponse.status)
+    if (activityResponse.ok) {
+      const activityData = await activityResponse.json()
+      console.log(`Received ${activityData.data?.length || 0} activity records from Oura`)
+      for (const activity of activityData.data || []) {
+        const upserts = [
+          { type: 'activity_score', value: activity.score },
+          { type: 'steps', value: activity.steps },
+          { type: 'active_calories', value: activity.active_calories },
+          { type: 'total_calories', value: activity.total_calories },
+        ]
+        for (const m of upserts) {
+          if (typeof m.value === 'number') {
+            const res = await supabaseClient
+              .from('metrics')
+              .upsert({
+                user_id: user.id,
+                type: m.type,
+                value: m.value,
+                source: 'oura',
+                timestamp: activity.day,
+                value_json: activity
+              }, {
+                onConflict: 'user_id,type,source,timestamp'
+              })
+            if (res.error) console.error(`Error inserting ${m.type}:`, res.error)
+          }
+        }
+      }
+      console.log(`Synced ${activityData.data?.length || 0} activity records`)
+    } else {
+      const errorText = await activityResponse.text()
+      console.error('Activity API error:', activityResponse.status, errorText)
+    }
     const stressResponse = await fetch(
       `${OURA_API_BASE}/daily_stress?start_date=${monthAgo}&end_date=${today}`,
       { headers }
